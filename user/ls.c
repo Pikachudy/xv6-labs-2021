@@ -28,7 +28,7 @@ ls(char *path)
   char buf[512], *p;
   int fd;
   struct dirent de;
-  struct stat st;
+  struct stat st;//存储文件信息的数据结构
 
   if((fd = open(path, 0)) < 0){
     fprintf(2, "ls: cannot open %s\n", path);
