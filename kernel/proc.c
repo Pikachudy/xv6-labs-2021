@@ -292,6 +292,9 @@ fork(void)
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
+  // 复制trace_number
+  np->trace_number = p->trace_number;
+
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
@@ -653,4 +656,16 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+uint64
+usedpro_num(void){
+  struct proc *p;
+  uint num=0;
+  //仿照proc.c -- 109, 通过遍历proc结构体数组找不为UNUSED的进程
+  for(p = proc; p < &proc[NPROC]; p++) {
+    if(p->state != UNUSED) {
+      num++;
+    } 
+  }
+  return num;
 }

@@ -80,3 +80,17 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+//返回空闲内存空间大小
+uint64
+freemem_num(void){
+  //由kalloc.c -- 47 的kfree可以看出：
+  //在初始化时，将一个PGSIZE大小的空间值全部置为1，并接到freelist链表的首端
+  //因此可以通过freelist来遍历空闲内存块
+  struct run * p_free =kmem.freelist;
+  uint number=0;
+  while(p_free){
+    number++;
+    p_free=p_free->next;
+  }
+  return number*PGSIZE;
+}
