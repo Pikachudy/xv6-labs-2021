@@ -99,8 +99,9 @@ sys_uptime(void)
 uint64
 sys_trace(void){
   int new_trace_number;
-  //从a0取出系统调用返回值
-  if(argint(0, (int*)&new_trace_number) < 0){
+  //仿照sysfile.c -- 81 
+  if(argint(0, &new_trace_number) < 0){
+    //得到系统调用第一个参数，为int类型
     return -1;
   }
   myproc()->trace_number=new_trace_number;

@@ -165,7 +165,7 @@ syscall(void)
   int num;
   struct proc *p = myproc();
 
-  num = p->trapframe->a7;//在initcode.S 里 第11行，将系统调用号（在syscall.h定义）放入寄存器a7
+  num = p->trapframe->a7;//在usys.S中，所有的系统调用号（在syscall.h定义）都放入了寄存器a7
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();//syscall是一个函数指针表，系统调用返回值放入a0
     //判断该系统调用是否被trace——需要用位运算，否则2147483647不会和任何一个匹配。
