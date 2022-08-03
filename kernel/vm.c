@@ -85,10 +85,10 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     panic("walk");
   //for 中进行了三次地址映射，对应三级目录
   for(int level = 2; level > 0; level--) {
-    pte_t *pte = &pagetable[PX(level, va)];//第一次映射
+    pte_t *pte = &pagetable[PX(level, va)];//第一次映射-level=2;第二次映射-level=1
     if(*pte & PTE_V) {
-      //如果有效，进行第二次映射
-      pagetable = (pagetable_t)PTE2PA(*pte);//第二次
+      //如果有效，则进入下一级
+      pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
       //若无效，若alloc不为0（即要分配新页）且有剩余空间则分配，否则return 0退出
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
