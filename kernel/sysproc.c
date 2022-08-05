@@ -70,6 +70,7 @@ sys_sleep(void)
     sleep(&ticks, &tickslock);
   }
   release(&tickslock);
+  backtrace();
   return 0;
 }
 
@@ -94,4 +95,31 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// 启动调用
+uint64
+sys_sigalarm(void){
+  struct proc *pr = myproc();
+  int alarm_ticks;
+  uint64 alarm_func;
+  //获取参数保存字段
+  if(argint(0,&alarm_ticks)<0){
+    return -1;
+  }
+  if(argaddr(1,&alarm_func)<0){
+    return -1;
+  }
+  pr->alarm_ticks=alarm_ticks;
+  pr->alarm_handler=alarm_func;
+  return 0;
+}
+
+// 恢复被中断的代码
+uint64
+sys_sigreturn(void){
+  struct proc *pr = myproc();
+  *pr->trapframe=*pr->stored_trapframe;// 恢复现场
+  pr->in_handler=0;
+  return 0;
 }
