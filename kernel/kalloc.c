@@ -23,11 +23,18 @@ struct {
   struct run *freelist;
 } kmem;
 
+// COW 页面引用计数数组
+int page_ref[(PHYSTOP-KERNBASE)/PGSIZE];
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
+  // 初始化引用次数
+  for(int i=0;i<(PHYSTOP-KERNBASE)/PGSIZE;++i){
+    page_ref[i]=0;
+  }
 }
 
 void
@@ -51,6 +58,14 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  // 判断是否引用为0
+  if(page_ref[((uint64)pa-KERNBASE)/PGSIZE]>1){
+    //printf("kfree: page_ref[%d] -- %d to ",((uint64)pa-KERNBASE)/PGSIZE,page_ref[((uint64)pa-KERNBASE)/PGSIZE]);
+    page_ref[((uint64)pa-KERNBASE)/PGSIZE]--;
+    //printf("page_ref[%d] -- %d\n",((uint64)pa-KERNBASE)/PGSIZE,page_ref[((uint64)pa-KERNBASE)/PGSIZE]);
+    return;
+  }
+  page_ref[((uint64)pa-KERNBASE)/PGSIZE] = 0;
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
@@ -76,7 +91,9 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
+  if(r){
     memset((char*)r, 5, PGSIZE); // fill with junk
+    page_ref[((uint64)r-KERNBASE)/PGSIZE] = 1; // 引用初始化
+  }
   return (void*)r;
 }
