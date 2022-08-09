@@ -25,8 +25,7 @@
 
 
 struct {
-  //一个桶一个锁
-  struct spinlock lock[NBUCKET];
+  struct spinlock lock[NBUCKET];//一个桶一个锁
   struct buf buf[NBUF]; 
   struct spinlock bcache_lock; // bcache锁
 
@@ -89,7 +88,7 @@ bget(uint dev, uint blockno)
   // 若没有缓存好
   acquire(&bcache.bcache_lock);
   acquire(&bcache.lock[index]);
-  // 遍历该桶
+  // 在执行89-90行过程中，已经释放了该桶的锁，此时有可能目标块被其他进程缓存到了该桶中，于是需要再遍历一遍该桶
   for(b = bcache.head[index].next; b != &bcache.head[index]; b = b->next){
     if(b->dev == dev && b->blockno == blockno){
       // 若已缓存好

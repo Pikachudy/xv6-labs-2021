@@ -77,7 +77,6 @@ kalloc(void)
 {
   struct run *r;
   int cpu_id;
-
   // 获取 cpu Id 
   push_off();
   cpu_id=cpuid();
@@ -96,19 +95,18 @@ kalloc(void)
       if (i == cpu_id) {
         continue;
       }
-      acquire(&kmem[i].lock);
+      acquire(&kmem[i].lock); // 不要忘记锁住
       r = kmem[i].freelist;
       if(r){
         kmem[i].freelist = r->next;
       }
-      release(&kmem[i].lock);
+      release(&kmem[i].lock); // 不要忘记释放锁
       if(r) {
         break;
       }
     }
   }
   release(&kmem[cpu_id].lock);
-
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
