@@ -401,6 +401,37 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
 
+  // 二级索引
+  bn-=NINDIRECT;
+  if(bn < NDINDIRECT){
+    // 加载索引块, 若无则分配
+    addr = ip->addrs[NDIRECT+1];
+    if(addr==0){
+      addr = balloc(ip->dev);
+      ip->addrs[NDIRECT+1] = addr;
+    }
+    // 找第二级索引,若无则分配
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    addr=a[bn/NINDIRECT];
+    if(addr==0){
+      addr=balloc(ip->dev);
+      a[bn/NINDIRECT] = addr;
+      log_write(bp);
+    }
+    brelse(bp);
+    // 找目标块,若无则分配
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    addr=a[bn%NINDIRECT];
+    if(addr==0){
+      addr=balloc(ip->dev);
+      a[bn%NINDIRECT] = addr;
+      log_write(bp);
+    }
+    brelse(bp);
+    return addr;
+  }
   panic("bmap: out of range");
 }
 
@@ -410,8 +441,8 @@ void
 itrunc(struct inode *ip)
 {
   int i, j;
-  struct buf *bp;
-  uint *a;
+  struct buf *bp , *d_bp; // 二级buf
+  uint *a,*d_a; //二级数据指针
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -432,6 +463,29 @@ itrunc(struct inode *ip)
     ip->addrs[NDIRECT] = 0;
   }
 
+  // 释放二级索引——仿照上部分释放代码，加层循环遍历即可
+    if(ip->addrs[NDIRECT+1]) {
+      bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+      a = (uint*)bp->data;
+      for(j = 0; j < NINDIRECT; j++) {
+        if(a[j]) {
+          // 第二级
+          d_bp = bread(ip->dev, a[j]);
+          d_a = (uint*)d_bp->data;
+          for(i = 0; i < NINDIRECT; i++) {
+            if(d_a[i]) {
+              bfree(ip->dev, d_a[i]);
+            }
+          }
+          brelse(d_bp);
+          bfree(ip->dev, a[j]);
+          a[j] = 0;
+        }
+      }
+      brelse(bp);
+      bfree(ip->dev, ip->addrs[NDIRECT+1]);
+      ip->addrs[NDIRECT] = 0;
+  }
   ip->size = 0;
   iupdate(ip);
 }
